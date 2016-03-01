@@ -1,1 +1,0 @@
-Hacemos lo mismo que v1 pero sin el click previo/sin usar el mousePressEvent

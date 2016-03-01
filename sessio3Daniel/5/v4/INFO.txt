@@ -1,1 +1,0 @@
-Pulsar, arrastrar y soltar cada vez que queramos mover el triangulo
