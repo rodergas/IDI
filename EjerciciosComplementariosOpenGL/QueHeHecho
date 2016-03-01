@@ -1,0 +1,644 @@
+///////////////////1 ColorCyan i foco de luz pos camara--------- tengo rotacion en eje Y////////////////
+
+En vertexShader
+
+void main()
+{	
+    //fcolor = matdiff;
+    mat3 tsco = mat3(view*TG);
+    mat3 NormalMatrix = inverse(transpose(tsco));
+    vec3 normal2 = normalize(NormalMatrix*normal);
+    
+    vec4 vertex2 = normalize(vec4(tsco*vertex, 1.0));
+    //vec4 posFocusOBS = normalize(vec4(view*posFocus, 1.0));
+    
+    vec3 llum = normalize(posFocus.xyz-vertex2.xyz);
+    
+    fcolor = Phong(normal2, llum, vertex2);
+    gl_Position = proj * view * TG * vec4 (vertex, 1.0);
+}
+
+posFocus no esta multiplicado, focus de llum de camara
+
+vec3 colFocus = vec3(0, 1, 1); //De color cyan
+
+En MyGlWidget
+
+---
+
+//////////////////2 Agrega Patricio///////////////
+Añadir funciones, al .h
+
+VertexShad nada
+
+MyGlWidget
+
+void MyGLWidget::paintGL ()
+{
+  // Esborrem el frame-buffer i el depth-buffer
+  glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  // Activem el VAO per a pintar el terra 
+  glBindVertexArray (VAO_Terra);
+
+  modelTransformTerra ();
+
+  // pintem
+  glDrawArrays(GL_TRIANGLES, 0, 12);
+
+  // Activem el VAO per a pintar el Patricio
+  glBindVertexArray (VAO_Patr);
+
+ modelTransformPatricio ();
+
+  // Pintem l'escena
+  glDrawArrays(GL_TRIANGLES, 0, patr.faces().size()*3);
+
+  modelTransformPatricio2();
+  // Pintem l'escena
+  glDrawArrays(GL_TRIANGLES, 0, patr.faces().size()*3);
+  
+  glBindVertexArray(0);
+}
+
+void MyGLWidget::modelTransformPatricio2()
+{
+  glm::mat4 TG;  // Matriu de transformació
+  TG = glm::translate(glm::mat4(1.f), glm::vec3(0,2,0)); //factor escala 2/respecto la altura, la altura valdra 2
+  TG = glm::rotate(TG, -anglePat, glm::vec3(0,0,1));
+  TG = glm::scale(TG, glm::vec3(escala, escala, escala));
+  TG = glm::translate(TG, -centrePatr);
+
+  glUniformMatrix4fv (transLoc, 1, GL_FALSE, &TG[0][0]);
+}
+
+anglePat = M_PI;
+
+Sentido horario, negativo
+
+void MyGLWidget::viewTransform ()
+{
+  glm::mat4 View;  // Matriu de posició i orientació
+  View = glm::translate(glm::mat4(1.f), glm::vec3(0, 0, -2*radiEsc));
+  View = glm::rotate(View, -angleY, glm::vec3(0, 1, 0));
+  View = glm::translate(View, glm::vec3(0, -1, 0)); //En el medio de los dos patricios
+
+  glUniformMatrix4fv (viewLoc, 1, GL_FALSE, &View[0][0]);
+}
+
+/////////////////3 Pintar Vaca////////////////////
+
+Afegir vaca
+
+MyGlWidget en createBuffers
+
+//Dades cow
+
+  cow.load("./models/cow.obj");
+
+  // Calculem la capsa contenidora del model
+  calculaCapsaModelCow();
+
+  // Creació del Vertex Array Object del Patricio
+  glGenVertexArrays(1, &VAO_cow);
+  glBindVertexArray(VAO_cow);
+
+  // Creació dels buffers del model patr
+  // Buffer de posicions
+  glGenBuffers(1, &VBO_cowPos);
+  glBindBuffer(GL_ARRAY_BUFFER, VBO_cowPos);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat)*cow.faces().size()*3*3, cow.VBO_vertices(), GL_STATIC_DRAW);
+
+  // Activem l'atribut vertexLoc
+  glVertexAttribPointer(vertexLoc, 3, GL_FLOAT, GL_FALSE, 0, 0);
+  glEnableVertexAttribArray(vertexLoc);
+
+  // Buffer de normals
+  glGenBuffers(1, &VBO_cowNorm);
+  glBindBuffer(GL_ARRAY_BUFFER, VBO_cowNorm);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat)*cow.faces().size()*3*3, cow.VBO_normals(), GL_STATIC_DRAW);
+
+  glVertexAttribPointer(normalLoc, 3, GL_FLOAT, GL_FALSE, 0, 0);
+  glEnableVertexAttribArray(normalLoc);
+
+  // En lloc del color, ara passem tots els paràmetres dels materials
+  // Buffer de component ambient
+  glGenBuffers(1, &VBO_cowMatamb);
+  glBindBuffer(GL_ARRAY_BUFFER, VBO_cowMatamb);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat)*cow.faces().size()*3*3, cow.VBO_matamb(), GL_STATIC_DRAW);
+
+  glVertexAttribPointer(matambLoc, 3, GL_FLOAT, GL_FALSE, 0, 0);
+  glEnableVertexAttribArray(matambLoc);
+
+  // Buffer de component difusa
+  glGenBuffers(1, &VBO_cowMatdiff);
+  glBindBuffer(GL_ARRAY_BUFFER, VBO_cowMatdiff);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat)*cow.faces().size()*3*3, cow.VBO_matdiff(), GL_STATIC_DRAW);
+
+  glVertexAttribPointer(matdiffLoc, 3, GL_FLOAT, GL_FALSE, 0, 0);
+  glEnableVertexAttribArray(matdiffLoc);
+
+  // Buffer de component especular
+  glGenBuffers(1, &VBO_cowMatspec);
+  glBindBuffer(GL_ARRAY_BUFFER, VBO_cowMatspec);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat)*cow.faces().size()*3*3, cow.VBO_matspec(), GL_STATIC_DRAW);
+
+  glVertexAttribPointer(matspecLoc, 3, GL_FLOAT, GL_FALSE, 0, 0);
+  glEnableVertexAttribArray(matspecLoc);
+
+  // Buffer de component shininness
+  glGenBuffers(1, &VBO_cowMatshin);
+  glBindBuffer(GL_ARRAY_BUFFER, VBO_cowMatshin);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat)*cow.faces().size()*3, cow.VBO_matshin(), GL_STATIC_DRAW);
+
+  glVertexAttribPointer(matshinLoc, 1, GL_FLOAT, GL_FALSE, 0, 0);
+  glEnableVertexAttribArray(matshinLoc);
+  
+  void MyGLWidget::paintGL ()
+{
+  // Esborrem el frame-buffer i el depth-buffer
+  glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  // Activem el VAO per a pintar el terra 
+  glBindVertexArray (VAO_Terra);
+
+  modelTransformTerra ();
+
+  // pintem
+  glDrawArrays(GL_TRIANGLES, 0, 12);
+
+  // Activem el VAO per a pintar el Patricio
+  glBindVertexArray (VAO_Patr);
+
+ modelTransformPatricio ();
+
+  // Pintem l'escena
+  glDrawArrays(GL_TRIANGLES, 0, patr.faces().size()*3);
+
+  //modelTransformPatricio2();
+  // Pintem l'escena
+  //glDrawArrays(GL_TRIANGLES, 0, patr.faces().size()*3);
+
+  
+  glBindVertexArray(0);
+  glBindVertexArray (VAO_cow);
+  modelTransformCow();
+  // Pintem l'escena
+  glDrawArrays(GL_TRIANGLES, 0, cow.faces().size()*3);
+  glBindVertexArray(0);
+}
+
+void MyGLWidget::modelTransformCow()
+{
+  glm::mat4 TG;  // Matriu de transformació
+  //TG = glm::scale(TG, glm::vec3(escala, escala, escala));
+  TG = glm::translate(glm::mat4(1.f), glm::vec3(1,-1,0));
+  //TG = glm::rotate(TG, (float)-M_PI/2.0f, glm::vec3(1.0,0.0,0.0));
+  //TG = glm::rotate(TG, (float)-M_PI/2.0f, glm::vec3(0.0,0.0,1.0));
+  TG = glm::rotate(TG, (float)-M_PI/2.0f, glm::vec3(0.0,1.0,0.0));
+  TG = glm::rotate(TG, (float)-M_PI/2.0f, glm::vec3(1.0,0.0,0.0));
+  TG = glm::scale(TG, glm::vec3(escalaCow, escalaCow, escalaCow));
+  TG = glm::translate(TG, -centreBaseCow);
+
+  glUniformMatrix4fv (transLoc, 1, GL_FALSE, &TG[0][0]);
+}
+
+
+calculaCapsaModel ()
+  escala = 0.25/(maxy-miny);
+  centrePatr[0] = (minx+maxx)/2.0; centrePatr[1] = (miny+maxy)/2.0; centrePatr[2] = (minz+maxz)/2.0;
+  centreBasePatr[0] = (minx+maxx)/2.0; centreBasePatr[1] = miny; centreBasePatr[2] = (minz+maxz)/2.0;
+}
+
+void MyGLWidget::calculaCapsaModelCow()
+{
+  // Càlcul capsa contenidora i valors transformacions inicials
+  float minx, miny, minz, maxx, maxy, maxz;
+  minx = maxx = cow.vertices()[0];
+  miny = maxy = cow.vertices()[1];
+  minz = maxz = cow.vertices()[2];
+  for (unsigned int i = 3; i < cow.vertices().size(); i+=3)
+  {
+    if (cow.vertices()[i+0] < minx)
+      minx = cow.vertices()[i+0];
+    if (cow.vertices()[i+0] > maxx)
+      maxx = cow.vertices()[i+0];
+    if (cow.vertices()[i+1] < miny)
+      miny = cow.vertices()[i+1];
+    if (cow.vertices()[i+1] > maxy)
+      maxy = cow.vertices()[i+1];
+    if (cow.vertices()[i+2] < minz)
+      minz = cow.vertices()[i+2];
+    if (cow.vertices()[i+2] > maxz)
+      maxz = cow.vertices()[i+2];
+  }
+  escalaCow = 0.5/(maxy-miny);
+  centreCow[0] = (minx+maxx)/2.0; centreCow[1] = (miny+maxy)/2.0; centreCow[2] = (minz+maxz)/2.0;
+  centreBaseCow[0] = (minx+maxx)/2.0; centreBaseCow[1] = miny; centreBaseCow[2] = (minz+maxz)/2.0;
+}
+
+  TG = glm::translate(TG, -centreBasePatr); //modelTransformPatricio
+  TG = glm::translate(TG, -centreBaseCow); //modelTransformCow
+  
+  
+////////////////4 que rote con la tecla R
+  
+  añadir rotar en el .h
+  
+  void MyGLWidget::keyPressEvent (QKeyEvent *e)
+{
+  switch (e->key())
+  {
+    case Qt::Key_R : {
+        rotar += M_PI/6.0;
+        modelTransformPatricio();
+        modelTransformCow();
+        updateGL();
+        break;
+    }
+    case Qt::Key_Escape:
+        exit(0);
+
+    default: e->ignore(); break;
+  }
+  updateGL();
+}
+
+void MyGLWidget::modelTransformCow()
+{
+  glm::mat4 TG;  // Matriu de transformació
+  //TG = glm::scale(TG, glm::vec3(escala, escala, escala));
+  TG = glm::translate(glm::mat4(1.f), glm::vec3(1,-1,0));
+  //TG = glm::rotate(TG, (float)-M_PI/2.0f, glm::vec3(1.0,0.0,0.0));
+  //TG = glm::rotate(TG, (float)-M_PI/2.0f, glm::vec3(0.0,0.0,1.0));
+  TG = glm::rotate(TG, rotar, glm::vec3(0,1,0));
+  TG = glm::rotate(TG, (float)-M_PI/2.0f, glm::vec3(0.0,1.0,0.0));
+  TG = glm::rotate(TG, (float)-M_PI/2.0f, glm::vec3(1.0,0.0,0.0));
+  TG = glm::scale(TG, glm::vec3(escalaCow, escalaCow, escalaCow));
+  TG = glm::translate(TG, -centreBaseCow);
+
+  glUniformMatrix4fv (transLoc, 1, GL_FALSE, &TG[0][0]);
+}
+  
+void MyGLWidget::modelTransformPatricio ()
+{
+  glm::mat4 TG;  // Matriu de transformació
+  TG = glm::translate(glm::mat4(1.f), glm::vec3(1,-0.5,0));
+  TG = glm::rotate(TG, rotar, glm::vec3(0,1,0));
+  TG = glm::scale(TG, glm::vec3(escala, escala, escala));
+  TG = glm::translate(TG, -centreBasePatr);
+
+  glUniformMatrix4fv (transLoc, 1, GL_FALSE, &TG[0][0]);
+}
+
+//////////////5 Modificar camara + camara mirara centro patricio, k L se mueve pat y camara + no redimension///////
+///Znear i zfar adecuados//
+MyGlWidget
+  ra
+  vrp = glm::vec3(0,0,0);
+  FOV = M_PI/3;
+  FOVIni = M_PI/6;
+   declarar todo eso en el .h
+  void MyGLWidget::projectTransform ()
+{
+  //sempre mantenim la aspect ratio de la pantalla per evitar deformacions
+    //double ax = (2*radiEsc - 2)/2;
+    //double FOV = atan((2+ax)/2*radiEsc)*2;
+  glm::mat4 Proj;  // Matriu de projecció
+  //Proj = glm::perspective(M_PI/3, 1.0, radiEsc/2, 3.*radiEsc);
+  //Proj = glm::perspective(FOV, 1.0, radiEsc, 3.*radiEsc);
+  //glUniformMatrix4fv (projLoc, 1, GL_FALSE, &Proj[0][0]);
+  ra = double (width()) / double (height());
+  if(ra > 1){
+  glm::mat4 Proj = glm::perspective(FOV, ra, radiEsc/2, 3.*radiEsc);
+  glUniformMatrix4fv(projLoc, 1,GL_FALSE, &Proj[0][0]);
+  }else{
+      FOV = 2*atan(tan(FOVIni)/ra);
+      glm::mat4 Proj = glm::perspective(FOV, ra, radiEsc/2, 3.*radiEsc);
+      glUniformMatrix4fv(projLoc, 1,GL_FALSE, &Proj[0][0]);
+  }
+}
+
+void MyGLWidget::resizeGL (int w, int h)
+{
+  glViewport (0, 0, w, h);
+    projectTransform();
+}
+
+void MyGLWidget::viewTransform ()
+{
+  glm::mat4 View;  // Matriu de posició i orientació
+  //View = glm::translate(glm::mat4(1.f), glm::vec3(0, 0, -2*radiEsc));
+
+
+
+  View = glm::lookAt(glm::vec3(-1,1,-1),glm::vec3(1 + vrp[0],-(0.5-0.125),0),glm::vec3(0,1,0)); OBS,VRP,UP VRP apunta al centro de patr
+  View = glm::rotate(View, -angleY, glm::vec3(0, 1, 0));
+  //View = glm::translate(View, glm::vec3(0, -1, 0));
+
+  glUniformMatrix4fv (viewLoc, 1, GL_FALSE, &View[0][0]);
+}
+
+void MyGLWidget::modelTransformPatricio ()
+{
+  glm::mat4 TG;  // Matriu de transformació
+  TG = glm::translate(glm::mat4(1.f), glm::vec3(1 + vrp[0] ,-0.5,0 ));
+  TG = glm::rotate(TG, rotar, glm::vec3(0,1,0));
+  TG = glm::scale(TG, glm::vec3(escala, escala, escala));
+  TG = glm::translate(TG, -centreBasePatr);
+
+  glUniformMatrix4fv (transLoc, 1, GL_FALSE, &TG[0][0]);
+}
+
+void MyGLWidget::keyPressEvent (QKeyEvent *e)
+{
+  switch (e->key())
+  {
+    case Qt::Key_R : {
+        rotar += M_PI/6.0;
+        modelTransformPatricio();
+        modelTransformCow();
+        updateGL();
+        break;
+    }
+      case Qt::Key_K : {
+          vrp[0] -= 0.2;
+          modelTransformPatricio();
+          viewTransform();
+          updateGL();
+          break;
+      }
+      case Qt::Key_L : {
+          vrp[0] += 0.2;
+          modelTransformPatricio();
+          viewTransform();
+          updateGL();
+          break;
+      }
+
+    case Qt::Key_Escape:
+        exit(0);
+
+    default: e->ignore(); break;
+  }
+  updateGL();
+}
+
+
+//6 Pos focus BLANCA damunt pat, pos focus se mueve con amunt abaix eje z y detra esquerra eje X
+
+
+    posF = glm::vec3(1,0,0); //encima Pat que esta enla pos (1,-0.5,0)
+  mourePat = glm::vec3(0,0,0);
+mourePat, posFocus declarar
+
+vertshader
+
+vec3 colFocus = vec3(1, 1, 1); 
+uniform vec3 posFocus;
+
+
+MyGlWidget
+
+
+void MyGLWidget::llum()
+{
+glUniform3f(posFocusLoc, posF[0], posF[1], posF[2]);
+}
+
+posFocusLoc = glGetUniformLocation (program->programId(), "posFocus");
+
+void MyGLWidget::modelTransformPatricio ()
+{
+  glm::mat4 TG;  // Matriu de transformació
+  TG = glm::translate(glm::mat4(1.f), glm::vec3(1 + vrp[0]+ mourePat[0],-0.5,0+ mourePat[2]));
+  TG = glm::rotate(TG, rotar, glm::vec3(0,1,0));
+  TG = glm::scale(TG, glm::vec3(escala, escala, escala));
+  TG = glm::translate(TG, -centreBasePatr);
+
+  glUniformMatrix4fv (transLoc, 1, GL_FALSE, &TG[0][0]);
+}
+
+
+void MyGLWidget::keyPressEvent (QKeyEvent *e)
+{
+  switch (e->key())
+  {
+    case Qt::Key_R : {
+        rotar += M_PI/6.0;
+        modelTransformPatricio();
+        modelTransformCow();
+        updateGL();
+        break;
+    }
+      case Qt::Key_K : {
+          vrp[0] -= 0.2;
+          modelTransformPatricio();
+          viewTransform();
+          updateGL();
+          break;
+      }
+      case Qt::Key_L : {
+          vrp[0] += 0.2;
+          modelTransformPatricio();
+          viewTransform();
+          updateGL();
+          break;
+      }
+            case Qt::Key_Up: {
+          posF[2] -= 0.1;
+          mourePat[2] -= 0.1;
+          modelTransformPatricio();
+          llum();
+          break;
+      }
+      case Qt::Key_Down: {
+          posF[2] += 0.1;
+          mourePat[2] += 0.1;
+          modelTransformPatricio();
+          llum();
+          break;
+      }
+      case Qt::Key_Left: {
+          posF[0] -= 0.1;
+          mourePat[0] -= 0.1;
+          modelTransformPatricio();
+          llum();
+          break;
+      }
+      case Qt::Key_Right: {
+          posF[0] += 0.1;
+          mourePat[0] += 0.1;
+          modelTransformPatricio();
+          llum();
+          break;
+      }
+    case Qt::Key_Escape:
+        exit(0);
+
+    default: e->ignore(); break;
+  }
+  updateGL();
+}
+ 
+ 
+ ////////////7 vaca gris brillante//////////
+ 
+ vecshad
+ 
+ uniform int cow;
+vec3 matambA;
+vec3 matdiffA;
+vec3 matspecA;
+float matshinA;
+
+     if(cow == 1){
+        matambA = vec3(0.6,0.6,0.6);
+        matdiffA = vec3(0.6,0.6,0.6);
+        matspecA = vec3(0.8,0.8,0.8);
+        matshinA = 100.0;
+    } else{
+        matambA = matamb;
+        matdiffA = matdiff;
+        matspecA =matspec;
+        matshinA = matshin;
+    }
+    
+   //modifcar MAtrices x defecto matdiff a matdiffA por ejemplo
+vec3 Lambert (vec3 NormSCO, vec3 L) 
+{
+    // S'assumeix que els vectors que es reben com a paràmetres estan normalitzats
+
+    // Inicialitzem color a component ambient
+    vec3 colRes = llumAmbient * matamb;
+
+    // Afegim component difusa, si n'hi ha
+    if (dot (L, NormSCO) > 0)
+      colRes = colRes + colFocus * matdiffA * dot (L, NormSCO);
+    return (colRes);
+}
+
+vec3 Phong (vec3 NormSCO, vec3 L, vec4 vertSCO) 
+{
+    // Els vectors estan normalitzats
+
+    // Inicialitzem color a Lambert
+    vec3 colRes = Lambert (NormSCO, L);
+
+    // Calculem R i V
+    if (dot(NormSCO,L) < 0)
+      return colRes;  // no hi ha component especular
+
+    vec3 R = reflect(-L, NormSCO); // equival a: normalize (2.0*dot(NormSCO,L)*NormSCO - L);
+    vec3 V = normalize(-vertSCO.xyz);
+
+    if ((dot(R, V) < 0) || (matshinA == 0))
+      return colRes;  // no hi ha component especular
+    
+    // Afegim la component especular
+    float shine = pow(max(0.0, dot(R, V)), matshinA);
+    return (colRes + matspecA * colFocus * shine); 
+}
+
+    MyGlWidget
+    void MyGLWidget::paintGL ()
+{
+  // Esborrem el frame-buffer i el depth-buffer
+  glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  // Activem el VAO per a pintar el terra 
+  glBindVertexArray (VAO_Terra);
+
+  modelTransformTerra ();
+
+  // pintem
+  glDrawArrays(GL_TRIANGLES, 0, 12);
+
+  // Activem el VAO per a pintar el Patricio
+  glBindVertexArray (VAO_Patr);
+
+ modelTransformPatricio ();
+
+  // Pintem l'escena
+  glDrawArrays(GL_TRIANGLES, 0, patr.faces().size()*3);
+
+  //modelTransformPatricio2();
+  // Pintem l'escena
+  //glDrawArrays(GL_TRIANGLES, 0, patr.faces().size()*3);
+
+  
+  glBindVertexArray(0);
+  glBindVertexArray (VAO_cow);
+  glUniform1i(cowLoc, 1);
+  modelTransformCow();
+  // Pintem l'escena
+  glDrawArrays(GL_TRIANGLES, 0, cow.faces().size()*3);
+  glUniform1i(cowLoc, 0);
+  glBindVertexArray(0);
+}
+
+
+//8///// zoom????
+
+void MyGLWidget::mousePressEvent (QMouseEvent *e)
+{
+  xClick = e->x();
+  yClick = e->y();
+
+  if (e->button() & Qt::LeftButton &&
+      ! (e->modifiers() & (Qt::ShiftModifier|Qt::AltModifier|Qt::ControlModifier)))
+  {
+    DoingInteractive = ROTATE;
+  }
+  if (e->button() & Qt::RightButton &&
+      ! (e->modifiers() & (Qt::ShiftModifier|Qt::AltModifier|Qt::ControlModifier)))
+  {
+    DoingInteractive = ZOOM;
+  }
+}
+
+void MyGLWidget::mouseMoveEvent(QMouseEvent *e)
+{
+  // Aqui cal que es calculi i s'apliqui la rotacio o el zoom com s'escaigui...
+  if (DoingInteractive == ROTATE)
+  {
+    // Fem la rotació
+    angleY += (e->x() - xClick) * M_PI / 180.0;
+    viewTransform ();
+  }
+  else if(DoingInteractive == ZOOM){
+    FOV += 0.2;
+    projectTransform();
+  }
+
+
+
+  xClick = e->x();
+  yClick = e->y();
+
+  updateGL ();
+
+}
+//Comentar FOV para que no te lo machaque
+
+void MyGLWidget::projectTransform ()
+{
+  //sempre mantenim la aspect ratio de la pantalla per evitar deformacions
+    //double ax = (2*radiEsc - 2)/2;
+    //double FOV = atan((2+ax)/2*radiEsc)*2;
+  glm::mat4 Proj;  // Matriu de projecció
+  //Proj = glm::perspective(M_PI/3, 1.0, radiEsc/2, 3.*radiEsc);
+  //Proj = glm::perspective(FOV, 1.0, radiEsc, 3.*radiEsc);
+  //glUniformMatrix4fv (projLoc, 1, GL_FALSE, &Proj[0][0]);
+  ra = double (width()) / double (height());
+  if(ra > 1){
+  glm::mat4 Proj = glm::perspective(FOV, ra, radiEsc/2, 3.*radiEsc);
+  glUniformMatrix4fv(projLoc, 1,GL_FALSE, &Proj[0][0]);
+  }else{
+      //FOV = 2*atan(tan(FOVIni)/ra);
+      glm::mat4 Proj = glm::perspective(FOV, ra, radiEsc/2, 3.*radiEsc);
+      glUniformMatrix4fv(projLoc, 1,GL_FALSE, &Proj[0][0]);
+  }
+}
+
+    

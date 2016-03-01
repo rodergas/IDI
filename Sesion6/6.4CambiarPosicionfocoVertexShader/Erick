@@ -1,0 +1,39 @@
+Object Space (SCA)
+|
+| ModelMatrix
+|
+World Space
+|
+| ViewMatrix*modelMatrix
+|
+Camera (SCO)
+|
+| ProjectionMatrix*ViewMatrix*modelMatrix
+|
+Clip space
+|
+| (ProjectionMatrix*ViewMatrix*modelMatrix)/ ProjectionMatrix*ViewMatrix*modelMatrix.w
+|
+Viewport
+
+
+
+Para ir arriba, la inversa de cada una
+
+Object Space
+|
+| ModelMatrix
+|
+World Space
+|
+| ViewMatrix*modelMatrix
+|
+Camera (SCO)
+|
+| ProjectionMatrix*ViewMatrix*modelMatrix
+|
+Clip space
+|
+| (ProjectionMatrix*ViewMatrix*modelMatrix)/ ProjectionMatrix*ViewMatrix*modelMatrix.w
+|
+Viewport
